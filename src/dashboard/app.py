@@ -22,6 +22,20 @@ st.markdown(
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
+#MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; height: 0; }
+.block-container { padding-top: 2rem; max-width: 900px; }
+
+.stButton button {
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    background: #1C2530;
+    color: white;
+    border: none;
+    padding: 8px 22px;
+}
+.stButton button:hover { background: #F59E0B; color: #1C2530; }
+
 .hw-header {
     background: linear-gradient(135deg, #FFFFFF 0%, #F3F0E8 100%);
     border: 1px solid #E7E2D3;
@@ -90,6 +104,76 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 
 [data-testid="stMetricValue"] { font-family: 'JetBrains Mono', monospace; }
+
+/* --- 결과 카드 --- */
+.result-card {
+    background: #FFFFFF;
+    border: 1px solid #EAE6DA;
+    border-radius: 16px;
+    padding: 28px 30px;
+    box-shadow: 0 2px 14px rgba(28,37,48,0.05);
+    margin-top: 8px;
+}
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 18px;
+}
+.status-pill.confident { background: #E9F7EF; color: #15803D; }
+.status-pill.uncertain { background: #FEECEC; color: #B91C1C; }
+.status-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+
+.stat-row { display: flex; gap: 14px; margin: 20px 0 26px 0; flex-wrap: wrap; }
+.stat-chip {
+    flex: 1;
+    min-width: 140px;
+    background: #F7F5EF;
+    border: 1px solid #EAE6DA;
+    border-radius: 12px;
+    padding: 14px 18px;
+}
+.stat-chip .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #1C2530;
+}
+.stat-chip .stat-label { font-size: 0.78rem; color: #8A8372; margin-top: 2px; }
+
+.cluster-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+.cluster-card {
+    border-radius: 12px;
+    border: 1px solid #EAE6DA;
+    padding: 14px 18px;
+    background: #FDFDFB;
+}
+.cluster-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1C2530;
+    margin-bottom: 10px;
+}
+.cluster-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.answer-bubble {
+    background: #FFFFFF;
+    border: 1px solid #EFEBE0;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin-bottom: 6px;
+    font-size: 0.92rem;
+    color: #3A3F47;
+}
+.answer-bubble:last-child { margin-bottom: 0; }
 </style>
 
 <div class="hw-header">
@@ -141,38 +225,59 @@ if st.button("분석 실행"):
             st.error(str(e))
             st.stop()
 
+    import html as html_lib
+
     if result.embedding_method == "tfidf-fallback":
         st.warning("⚠️ sentence-transformers 로드 실패로 TF-IDF 폴백 사용 중 — 패러프레이즈 인식 정확도가 낮습니다.")
 
-    if result.is_uncertain:
-        st.error(f"⚠️ 불확실한 답변입니다 (정규화 엔트로피: {result.normalized_entropy_score:.2f})")
-    else:
-        st.success(f"✅ 모델이 확신하는 답변으로 보입니다 (정규화 엔트로피: {result.normalized_entropy_score:.2f})")
-
-    # --- 엔트로피 게이지 시각화 ---
     score_pct = max(0.0, min(1.0, result.normalized_entropy_score)) * 100
     threshold_pct = max(0.0, min(1.0, uncertainty_threshold)) * 100
+
+    status_class = "uncertain" if result.is_uncertain else "confident"
+    status_text = "⚠️ 불확실한 답변" if result.is_uncertain else "✅ 확신하는 답변"
+
+    # 클러스터별 카드 HTML 생성 (색상 팔레트 순환)
+    palette = ["#16A34A", "#0EA5E9", "#F59E0B", "#8B5CF6", "#EC4899", "#DC2626", "#65A30D"]
+    cluster_ids = sorted(set(result.cluster_labels))
+    cluster_html_parts = []
+    for i, cluster_id in enumerate(cluster_ids):
+        color = palette[i % len(palette)]
+        count = result.cluster_labels.count(cluster_id)
+        answers_html = "".join(
+            f'<div class="answer-bubble">{html_lib.escape(sample)}</div>'
+            for sample, label in zip(result.samples, result.cluster_labels)
+            if label == cluster_id
+        )
+        cluster_html_parts.append(
+            f"""
+<div class="cluster-card">
+  <div class="cluster-card-head"><span class="cluster-dot" style="background:{color};"></span>클러스터 {cluster_id} · {count}개 답변</div>
+  {answers_html}
+</div>"""
+        )
+    cluster_html = "".join(cluster_html_parts)
+
     st.markdown(
         f"""
-<div class="entropy-gauge-wrap">
-  <div class="entropy-gauge-label"><span>확신 (0.0)</span><span>불확실 (1.0)</span></div>
-  <div class="entropy-gauge-track">
-    <div class="entropy-gauge-threshold" style="left:{threshold_pct}%;"></div>
-    <div class="entropy-gauge-marker" data-value="{result.normalized_entropy_score:.2f}" style="left:{score_pct}%;"></div>
+<div class="result-card">
+  <div class="status-pill {status_class}"><span class="dot"></span>{status_text} (정규화 엔트로피 {result.normalized_entropy_score:.2f})</div>
+
+  <div class="entropy-gauge-wrap">
+    <div class="entropy-gauge-label"><span>확신 (0.0)</span><span>불확실 (1.0)</span></div>
+    <div class="entropy-gauge-track">
+      <div class="entropy-gauge-threshold" style="left:{threshold_pct}%;"></div>
+      <div class="entropy-gauge-marker" data-value="{result.normalized_entropy_score:.2f}" style="left:{score_pct}%;"></div>
+    </div>
   </div>
+
+  <div class="stat-row">
+    <div class="stat-chip"><div class="stat-value">{len(result.samples)}</div><div class="stat-label">생성된 샘플 수</div></div>
+    <div class="stat-chip"><div class="stat-value">{result.n_clusters}</div><div class="stat-label">의미 클러스터 수</div></div>
+    <div class="stat-chip"><div class="stat-value">{result.normalized_entropy_score:.2f}</div><div class="stat-label">정규화 엔트로피</div></div>
+  </div>
+
+  <div class="cluster-grid">{cluster_html}</div>
 </div>
 """,
         unsafe_allow_html=True,
     )
-
-    m1, m2, m3 = st.columns(3)
-    m1.metric("생성된 샘플 수", len(result.samples))
-    m2.metric("발견된 의미 클러스터 수", result.n_clusters)
-    m3.metric("정규화 엔트로피", f"{result.normalized_entropy_score:.2f}")
-
-    st.markdown("#### 생성된 답변들 (클러스터별)")
-    for cluster_id in sorted(set(result.cluster_labels)):
-        with st.expander(f"클러스터 {cluster_id} ({result.cluster_labels.count(cluster_id)}개 답변)"):
-            for i, (sample, label) in enumerate(zip(result.samples, result.cluster_labels)):
-                if label == cluster_id:
-                    st.write(f"- {sample}")
