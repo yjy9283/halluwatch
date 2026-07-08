@@ -3,6 +3,7 @@
 > LLM이 "확신 없는 답"을 내놓는 순간을 답변이 나오기 전에 미리 감지하는 환각(Hallucination) 조기경보 시스템
 
 ![대시보드](docs/screenshots/dashboard_main.png)
+![분석 결과 카드](docs/screenshots/dashboard_result.png)
 
 ## 문제의식
 
