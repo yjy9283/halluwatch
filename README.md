@@ -2,8 +2,8 @@
 
 > LLM이 "확신 없는 답"을 내놓는 순간을 답변이 나오기 전에 미리 감지하는 환각(Hallucination) 조기경보 시스템
 
-![대시보드](docs/screenshots/dashboard_main.png)
-![분석 결과 카드](docs/screenshots/dashboard_result.png)
+![대기 화면](docs/screenshots/dashboard_main.png)
+![분석 결과 (파형 시각화)](docs/screenshots/dashboard_result.png)
 
 ## 문제의식
 
@@ -25,33 +25,30 @@ models using semantic entropy"*, Nature, 630, 625–630의 핵심 아이디어�
   → 엔트로피가 임계값을 넘으면 "⚠️ 불확실한 답변" 경고
 ```
 
-핵심 통찰: 문장 표현이 달라도 뜻이 같으면 하나의 클러스터로 묶입니다.
-("파리입니다" / "프랑스의 수도는 파리예요" → 같은 클러스터)
-반대로 뜻 자체가 갈리면 클러스터가 여러 개로 나뉘고, 엔트로피가 높아집니다.
+## 디자인 컨셉 — 오실로스코프
 
-## 검증 방법
+이 도구의 본질은 "같은 신호(질문)를 여러 번 측정했을 때 파형이 서로 일치하는가"를 재는 것이라,
+실제 오실로스코프/신호계측기처럼 디자인했습니다. 각 답변을 sine wave 하나로 표현해서:
+- **같은 의미(클러스터)** → 위상이 거의 같아 서로 겹쳐 굵고 밝은 하나의 신호로 보임
+- **다른 의미** → 위상이 어긋나 지지직거리는 간섭무늬로 보임
 
-- **알려진 사실 질문** (예: "한국의 수도는?") → 답변이 거의 동일 → 낮은 엔트로피가 나와야 함
-- **모델이 모를 수밖에 없는 질문** (예: 최신/가상의 정보) → 답변이 제각각 → 높은 엔트로피가 나와야 함
+숫자(엔트로피 0.68)만 보여주는 대신, 왜 그 값이 나왔는지 파형으로 직관적으로 보여줍니다.
 
-이 두 극단 케이스로 도구가 실제로 구분해내는지 정량 검증합니다 (README 하단 실행 결과 참고).
+## 아키텍처
 
-## 검증 결과 및 한계 (실측)
+**Streamlit이 아닌 커스텀 웹앱**으로 만들었습니다 (Streamlit은 위젯 레이아웃의 한계로 "만들어진
+웹앱"보다는 "대시보드 툴" 느낌을 벗어나기 어려워서, 처음엔 Streamlit으로 만들었다가 완전히
+다시 만들었습니다 — 트러블슈팅 로그 참고).
 
-실제 sentence-transformers로 검증한 결과 (`scripts/inspect_embedding_distances.py`):
+```
+[web/] 순수 HTML/CSS/JS (프레임워크 없음)
+   ↕ fetch("/api/analyze")
+[src/api/main.py] FastAPI
+   ↕
+[src/entropy/pipeline.py] 샘플생성 → 임베딩 → 클러스터링 → 엔트로피 계산
+```
 
-| 케이스 | 코사인 거리 |
-|---|---|
-| 같은 의미 문장들 사이 최대 거리 | 0.280 |
-| 다른 의미 문장들 사이 최소 거리 | 0.219 |
-
-**한계를 정직하게 명시**: 두 값이 **겹칩니다** (0.280 > 0.219) — 하나의 고정 임계값으로
-"같은 의미"와 "다른 의미"를 이론적으로 완벽하게 가르는 것은 이 샘플 기준으로는 불가능합니다.
-`distance_threshold=0.3`은 이 두 극단 케이스를 기준으로 실용적으로 고른 값이며, 두 거리대가
-겹치는 경계 부근의 문장(표현은 비슷한데 실제로는 다른 의미인 경우 등)은 오분류될 여지가
-남아있습니다. 이는 코사인 거리 기반 클러스터링이 원 논문의 NLI(자연어 추론) 기반 클러스터링을
-근사한 것이기 때문에 생기는 본질적 한계이며, 표본을 늘리거나 임계값을 도메인별로 정교화하면
-개선 여지가 있습니다.
+FastAPI가 API와 정적 프론트엔드를 같은 서버에서 서빙해 CORS 문제 없이 하나의 서비스로 배포됩니다.
 
 ## 로컬 실행 방법
 
@@ -67,21 +64,52 @@ GROQ_API_KEY=본인_키_값
 ```
 
 ```bash
-streamlit run src/dashboard/app.py
+uvicorn src.api.main:app --reload
 ```
+
+브라우저에서 http://localhost:8000 접속.
 
 테스트:
 ```bash
 pytest tests/ -v
 ```
 
+## 검증 결과 및 한계 (실측)
+
+실제 sentence-transformers로 검증한 결과 (`scripts/inspect_embedding_distances.py`):
+
+| 케이스 | 코사인 거리 |
+|---|---|
+| 같은 의미 문장들 사이 최대 거리 | 0.280 |
+| 다른 의미 문장들 사이 최소 거리 | 0.219 |
+
+**한계를 정직하게 명시**: 두 값이 **겹칩니다** (0.280 > 0.219) — 하나의 고정 임계값으로
+"같은 의미"와 "다른 의미"를 이론적으로 완벽하게 가르는 것은 이 샘플 기준으로는 불가능합니다.
+`distance_threshold=0.3`은 이 두 극단 케이스를 기준으로 실용적으로 고른 값이며, 경계 부근의
+문장은 오분류될 여지가 남아있습니다.
+
+## 기타 한계점
+
+- sentence-transformers 모델을 못 받아오는 환경(네트워크 제한 등)에서는 TF-IDF(단어 일치 기반)로
+  자동 대체되는데, 이 경우 패러프레이즈(다른 단어로 같은 뜻)를 잘 못 잡아냅니다.
+- 클러스터링은 원 논문의 NLI(자연어 추론) 기반이 아닌 코사인 거리 기반 근사입니다.
+- 전체 샘플 생성이 실패하면(네트워크 오류 등) API가 502로 명확히 에러를 반환합니다 — 초기
+  버전에서는 이 경우도 "샘플 0개짜리 성공"으로 잘못 응답하는 버그가 있었고, 실사용 테스트
+  중 발견해 수정했습니다 (트러블슈팅 로그 참고).
+
+## 트러블슈팅
+
+실전에서 발견한 문제와 해결 과정은 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)에
+정리했습니다.
+
 ## 기술 스택
 
-- LLM: Groq API (gpt-oss-120b)
-- 임베딩: sentence-transformers (로컬 실행, 무료)
-- 클러스터링: scikit-learn (DBSCAN)
-- 통계: Shannon entropy
-- 대시보드: Streamlit
+- 백엔드: FastAPI, uvicorn
+- AI: Groq API (gpt-oss-120b, OpenAI SDK 호환)
+- 임베딩: sentence-transformers (all-MiniLM-L6-v2), TF-IDF 폴백
+- 클러스터링/통계: scikit-learn (AgglomerativeClustering), Shannon entropy
+- 프론트엔드: 순수 HTML/CSS/JS (프레임워크 없음), SVG 파형 시각화
+- 테스트: pytest, FastAPI TestClient, Playwright(스크린샷 검증용)
 
 ## 참고 자료
 

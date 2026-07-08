@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HalluWatch — Semantic Entropy Signal Analyzer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="scope-bar">
+  <div class="scope-bar-left">
+    <span class="live-dot" id="liveDot"></span>
+    <span class="brand">HALLUWATCH</span>
+  </div>
+  <div class="scope-bar-right">SEMANTIC ENTROPY SIGNAL ANALYZER · v1.0</div>
+</header>
+
+<main>
+  <section class="control-panel">
+    <label class="ctl-label" for="question">PROBE INPUT — 질문</label>
+    <input id="question" class="question-input" type="text"
+      value="세종대왕이 발명한 전자기기는 무엇인가요?" autocomplete="off">
+
+    <div class="knob-row">
+      <div class="knob">
+        <label class="ctl-label">SAMPLES <span id="nSamplesVal">8</span></label>
+        <input type="range" id="nSamples" min="3" max="20" value="8">
+      </div>
+      <div class="knob">
+        <label class="ctl-label">TEMP <span id="tempVal">1.0</span></label>
+        <input type="range" id="temperature" min="0.1" max="1.5" step="0.1" value="1.0">
+      </div>
+      <div class="knob">
+        <label class="ctl-label">THRESHOLD <span id="threshVal">0.40</span></label>
+        <input type="range" id="threshold" min="0.1" max="0.9" step="0.05" value="0.4">
+      </div>
+    </div>
+
+    <button id="analyzeBtn" class="analyze-btn">▶ ANALYZE SIGNAL</button>
+  </section>
+
+  <section class="scope-screen-wrap">
+    <div class="scope-label-row">
+      <span>SIGNAL TRACE</span>
+      <span id="scopeStatus">STANDBY</span>
+    </div>
+    <div class="scope-screen">
+      <svg id="scopeGrid" class="scope-grid" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
+      <svg id="scopeTraces" class="scope-traces" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
+    </div>
+  </section>
+
+  <section class="readout-row" id="readoutRow" style="display:none;">
+    <div class="readout-chip">
+      <div class="readout-value" id="roSamples">–</div>
+      <div class="readout-label">SAMPLES</div>
+    </div>
+    <div class="readout-chip">
+      <div class="readout-value" id="roClusters">–</div>
+      <div class="readout-label">CLUSTERS</div>
+    </div>
+    <div class="readout-chip">
+      <div class="readout-value" id="roEntropy">–</div>
+      <div class="readout-label">ENTROPY</div>
+    </div>
+    <div class="readout-chip status-chip" id="roStatusChip">
+      <div class="readout-value" id="roStatus">–</div>
+      <div class="readout-label">VERDICT</div>
+    </div>
+  </section>
+
+  <section class="transcript" id="transcript"></section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
