@@ -9,67 +9,80 @@
 <body>
 
 <header class="scope-bar">
-  <div class="scope-bar-left">
-    <span class="live-dot" id="liveDot"></span>
-    <span class="brand">HALLUWATCH</span>
-  </div>
-  <div class="scope-bar-right">SEMANTIC ENTROPY SIGNAL ANALYZER · v1.0</div>
+  <div class="scope-bar-left"><span class="brand">HalluWatch</span></div>
+  <div class="scope-bar-right">A Semantic-Entropy Approach to Hallucination Detection · after Farquhar et al., <i>Nature</i> 2024</div>
 </header>
 
 <main>
+  <p style="font-style:italic; color:var(--ink-muted); line-height:1.7; margin-top:4px;">
+    <b style="font-style:normal; color:var(--ink);">Abstract.</b>
+    동일한 질의를 언어모델에 반복 제시하고, 응답 간 의미적 일치도를 측정하여 모델의 확신도를
+    추정한다. 응답들이 의미적으로 수렴하면 낮은 엔트로피(확신)로, 발산하면 높은 엔트로피(불확실)로
+    판정한다.
+  </p>
+
+  <div class="section-label">§1 · Method — Query Input</div>
   <section class="control-panel">
-    <label class="ctl-label" for="question">PROBE INPUT — 질문</label>
+    <label class="ctl-label" for="question">QUESTION</label>
     <input id="question" class="question-input" type="text"
       value="세종대왕이 발명한 전자기기는 무엇인가요?" autocomplete="off">
 
     <div class="knob-row">
       <div class="knob">
-        <label class="ctl-label">SAMPLES <span id="nSamplesVal">8</span></label>
+        <label class="ctl-label">N (SAMPLES) <span id="nSamplesVal">8</span></label>
         <input type="range" id="nSamples" min="3" max="20" value="8">
       </div>
       <div class="knob">
-        <label class="ctl-label">TEMP <span id="tempVal">1.0</span></label>
+        <label class="ctl-label">τ (TEMPERATURE) <span id="tempVal">1.0</span></label>
         <input type="range" id="temperature" min="0.1" max="1.5" step="0.1" value="1.0">
       </div>
       <div class="knob">
-        <label class="ctl-label">THRESHOLD <span id="threshVal">0.40</span></label>
+        <label class="ctl-label">θ (THRESHOLD) <span id="threshVal">0.40</span></label>
         <input type="range" id="threshold" min="0.1" max="0.9" step="0.05" value="0.4">
       </div>
     </div>
 
-    <button id="analyzeBtn" class="analyze-btn">▶ ANALYZE SIGNAL</button>
+    <button id="analyzeBtn" class="analyze-btn">Run Analysis →</button>
   </section>
 
+  <div class="section-label">§2 · Results</div>
   <section class="scope-screen-wrap">
     <div class="scope-label-row">
-      <span>SIGNAL TRACE</span>
+      <span>FIG. 1 — RESPONSE WAVEFORMS</span>
       <span id="scopeStatus">STANDBY</span>
     </div>
     <div class="scope-screen">
       <svg id="scopeGrid" class="scope-grid" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
       <svg id="scopeTraces" class="scope-traces" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
     </div>
+    <p class="figure-caption" id="figureCaption">
+      <b>Figure 1.</b> 각 곡선은 하나의 모델 응답을 나타낸다. 위상이 일치하는 곡선(동일 클러스터)은
+      서로 겹쳐 보이고, 위상이 어긋난 곡선(다른 클러스터)은 간섭무늬를 형성한다. 분석 실행 전 대기 상태.
+    </p>
   </section>
 
-  <section class="readout-row" id="readoutRow" style="display:none;">
-    <div class="readout-chip">
-      <div class="readout-value" id="roSamples">–</div>
-      <div class="readout-label">SAMPLES</div>
-    </div>
-    <div class="readout-chip">
-      <div class="readout-value" id="roClusters">–</div>
-      <div class="readout-label">CLUSTERS</div>
-    </div>
-    <div class="readout-chip">
-      <div class="readout-value" id="roEntropy">–</div>
-      <div class="readout-label">ENTROPY</div>
-    </div>
-    <div class="readout-chip status-chip" id="roStatusChip">
-      <div class="readout-value" id="roStatus">–</div>
-      <div class="readout-label">VERDICT</div>
-    </div>
-  </section>
+  <table class="readout-row" id="readoutRow" style="display:none;">
+    <tr>
+      <td class="readout-chip">
+        <div class="readout-value" id="roSamples">–</div>
+        <div class="readout-label">samples (n)</div>
+      </td>
+      <td class="readout-chip">
+        <div class="readout-value" id="roClusters">–</div>
+        <div class="readout-label">clusters (k)</div>
+      </td>
+      <td class="readout-chip">
+        <div class="readout-value" id="roEntropy">–</div>
+        <div class="readout-label">entropy (H)</div>
+      </td>
+      <td class="readout-chip status-chip" id="roStatusChip">
+        <div class="readout-value" id="roStatus">–</div>
+        <div class="readout-label">verdict</div>
+      </td>
+    </tr>
+  </table>
 
+  <div class="section-label">§3 · Appendix — Raw Responses by Cluster</div>
   <section class="transcript" id="transcript"></section>
 </main>
 

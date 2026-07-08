@@ -1,5 +1,5 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
-const PALETTE = ["#4AFA8C", "#5EC8FA", "#FFD24A", "#C084FC", "#FF6B4A", "#FF4ADE", "#8CFF4A"];
+const PALETTE = ["#1E3A5F", "#3F5A3D", "#A6791F", "#5B4A7A", "#7A2E2E", "#2E5F5A", "#6B5B3A"];
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,20 +16,20 @@ function drawGrid() {
     const line = document.createElementNS(SVG_NS, "line");
     line.setAttribute("x1", x); line.setAttribute("y1", 0);
     line.setAttribute("x2", x); line.setAttribute("y2", 200);
-    line.setAttribute("stroke", "#1E2B24"); line.setAttribute("stroke-width", "1");
+    line.setAttribute("stroke", "#D8D0BC"); line.setAttribute("stroke-width", "1");
     svg.appendChild(line);
   }
   for (let y = 0; y <= 200; y += 25) {
     const line = document.createElementNS(SVG_NS, "line");
     line.setAttribute("x1", 0); line.setAttribute("y1", y);
     line.setAttribute("x2", 800); line.setAttribute("y2", y);
-    line.setAttribute("stroke", "#1E2B24"); line.setAttribute("stroke-width", "1");
+    line.setAttribute("stroke", "#D8D0BC"); line.setAttribute("stroke-width", "1");
     svg.appendChild(line);
   }
   const mid = document.createElementNS(SVG_NS, "line");
   mid.setAttribute("x1", 0); mid.setAttribute("y1", 100);
   mid.setAttribute("x2", 800); mid.setAttribute("y2", 100);
-  mid.setAttribute("stroke", "#2E9E5C"); mid.setAttribute("stroke-width", "1"); mid.setAttribute("opacity", "0.5");
+  mid.setAttribute("stroke", "#7A7262"); mid.setAttribute("stroke-width", "1"); mid.setAttribute("opacity", "0.6");
   svg.appendChild(mid);
 }
 drawGrid();
@@ -46,7 +46,7 @@ function startIdleWave() {
       const y = 100 + Math.sin(x / 40 + t) * 4;
       d += ` L${x},${y}`;
     }
-    svg.innerHTML = `<path d="${d}" stroke="#2E9E5C" stroke-width="1.2" fill="none" opacity="0.5"/>`;
+    svg.innerHTML = `<path d="${d}" stroke="#B8AE8F" stroke-width="1.2" fill="none" opacity="0.7"/>`;
     idleAnim = requestAnimationFrame(tick);
   }
   tick();
@@ -125,8 +125,8 @@ $("analyzeBtn").addEventListener("click", async () => {
 
   const btn = $("analyzeBtn");
   btn.disabled = true;
-  btn.textContent = "▶ SCANNING...";
-  $("scopeStatus").textContent = "SCANNING";
+  btn.textContent = "Analyzing…";
+  $("scopeStatus").textContent = "ANALYZING";
   $("readoutRow").style.display = "none";
   $("transcript").innerHTML = "";
 
@@ -161,17 +161,23 @@ $("analyzeBtn").addEventListener("click", async () => {
 
     const statusChip = $("roStatusChip");
     statusChip.classList.toggle("uncertain", data.is_uncertain);
-    $("scopeStatus").textContent = data.is_uncertain ? "⚠ NOISY SIGNAL" : "✓ SIGNAL LOCKED";
-    $("readoutRow").style.display = "flex";
+    $("scopeStatus").textContent = data.is_uncertain ? "DIVERGENT" : "CONVERGENT";
+    $("readoutRow").style.display = "table";
+
+    $("figureCaption").innerHTML =
+      `<b>Figure 1.</b> ${data.samples.length}개 응답이 ${data.n_clusters}개 의미 클러스터로 ` +
+      (data.n_clusters <= 1
+        ? `수렴했다 (H = ${data.normalized_entropy_score.toFixed(2)}). 모든 곡선이 위상을 공유하며 겹쳐 보인다.`
+        : `분산되었다 (H = ${data.normalized_entropy_score.toFixed(2)}). 클러스터 간 위상 차로 간섭무늬가 관찰된다.`);
   } catch (e) {
-    $("scopeStatus").textContent = "⚠ NO SIGNAL";
-    $("transcript").innerHTML = `<div class="cluster-block" style="border-left-color:#FF6B4A;">
-      <div class="cluster-block-head" style="color:#FF6B4A;">ERROR</div>
+    $("scopeStatus").textContent = "NO RESPONSE";
+    $("transcript").innerHTML = `<div class="cluster-block" style="border-top-color:#7A2E2E;">
+      <div class="cluster-block-head" style="color:#7A2E2E;">ERROR</div>
       <div class="cluster-answer">${e.message} — GROQ_API_KEY 설정을 확인하세요.</div>
     </div>`;
     startIdleWave();
   } finally {
     btn.disabled = false;
-    btn.textContent = "▶ ANALYZE SIGNAL";
+    btn.textContent = "Run Analysis →";
   }
 });
