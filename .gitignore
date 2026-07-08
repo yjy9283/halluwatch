@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 환경변수 / API 키
+.env
+*.key
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# 캐시된 임베딩 모델 등
+.cache/
