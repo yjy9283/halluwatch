@@ -14,7 +14,91 @@ import streamlit as st
 from src.entropy.pipeline import analyze_question
 
 st.set_page_config(page_title="HalluWatch", page_icon="🔦", layout="wide")
-st.title("🔦 HalluWatch — LLM 환각 조기경보")
+
+st.markdown(
+    """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+.hw-header {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F3F0E8 100%);
+    border: 1px solid #E7E2D3;
+    border-radius: 14px;
+    padding: 26px 32px;
+    margin-bottom: 20px;
+}
+.hw-header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 2.05rem;
+    color: #1C2530;
+    margin: 0 0 6px 0;
+}
+.hw-header .hw-sub {
+    color: #8A8372;
+    font-size: 0.92rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* 엔트로피 게이지 */
+.entropy-gauge-wrap { margin: 18px 0 26px 0; }
+.entropy-gauge-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: #6B7280;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.entropy-gauge-track {
+    position: relative;
+    height: 22px;
+    border-radius: 11px;
+    background: linear-gradient(90deg, #16A34A 0%, #EAB308 50%, #DC2626 100%);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+}
+.entropy-gauge-marker {
+    position: absolute;
+    top: -7px;
+    width: 4px;
+    height: 36px;
+    background: #1C2530;
+    border-radius: 2px;
+    transform: translateX(-50%);
+}
+.entropy-gauge-marker::after {
+    content: attr(data-value);
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #1C2530;
+    white-space: nowrap;
+}
+.entropy-gauge-threshold {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 28px;
+    background: rgba(28,37,48,0.35);
+    transform: translateX(-50%);
+}
+
+[data-testid="stMetricValue"] { font-family: 'JetBrains Mono', monospace; }
+</style>
+
+<div class="hw-header">
+  <h1>🔦 HalluWatch</h1>
+  <div class="hw-sub">SEMANTIC ENTROPY · HALLUCINATION EARLY WARNING</div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 st.markdown(
     "같은 질문을 LLM에 여러 번 물어봐서, 답변들이 의미적으로 얼마나 일치하는지(Semantic Entropy)로 "
@@ -30,8 +114,10 @@ with st.expander("ℹ️ 이 도구는 무엇을 측정하나요?"):
 - 그룹이 여러 개로 갈리면 → 모델이 헷갈리는 답 (높은 엔트로피, ⚠️ 경고)
 
 **한계**: sentence-transformers 모델을 못 받아오는 환경에서는 TF-IDF(단어 일치 기반)로
-자동 대체되는데, 이 경우 패러프레이즈(다른 단어로 같은 뜻)를 잘 못 잡아냅니다. 정확한
-측정을 위해서는 로컬 환경에서 sentence-transformers가 정상 동작해야 합니다.
+자동 대체되는데, 이 경우 패러프레이즈(다른 단어로 같은 뜻)를 잘 못 잡아냅니다. 또한 실측
+검증 결과("같은 의미" 문장 최대거리 0.280 vs "다른 의미" 문장 최소거리 0.219) 두 구간이
+겹쳐서, 하나의 임계값으로 완벽한 분리는 이론적으로 불가능하다는 한계도 있습니다
+(자세한 내용은 README/트러블슈팅 참고).
         """
     )
 
@@ -62,6 +148,22 @@ if st.button("분석 실행"):
         st.error(f"⚠️ 불확실한 답변입니다 (정규화 엔트로피: {result.normalized_entropy_score:.2f})")
     else:
         st.success(f"✅ 모델이 확신하는 답변으로 보입니다 (정규화 엔트로피: {result.normalized_entropy_score:.2f})")
+
+    # --- 엔트로피 게이지 시각화 ---
+    score_pct = max(0.0, min(1.0, result.normalized_entropy_score)) * 100
+    threshold_pct = max(0.0, min(1.0, uncertainty_threshold)) * 100
+    st.markdown(
+        f"""
+<div class="entropy-gauge-wrap">
+  <div class="entropy-gauge-label"><span>확신 (0.0)</span><span>불확실 (1.0)</span></div>
+  <div class="entropy-gauge-track">
+    <div class="entropy-gauge-threshold" style="left:{threshold_pct}%;"></div>
+    <div class="entropy-gauge-marker" data-value="{result.normalized_entropy_score:.2f}" style="left:{score_pct}%;"></div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
     m1, m2, m3 = st.columns(3)
     m1.metric("생성된 샘플 수", len(result.samples))
