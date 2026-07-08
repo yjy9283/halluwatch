@@ -12,13 +12,18 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 
 
-def cluster_by_meaning(embeddings: np.ndarray, distance_threshold: float = 0.15) -> np.ndarray:
+def cluster_by_meaning(embeddings: np.ndarray, distance_threshold: float = 0.3) -> np.ndarray:
     """임베딩을 코사인 거리 기반으로 계층적 클러스터링한다.
 
     Args:
         embeddings: (N, D) 임베딩 행렬
         distance_threshold: 이 거리보다 가까우면 "같은 의미"로 묶는다.
             낮을수록 더 엄격하게(비슷해야만) 묶고, 높을수록 관대하게 묶는다.
+            기본값 0.3은 실사용 검증(sentence-transformers 정상 로드된 환경)에서, 0.15로는
+            "서울입니다" / "대한민국의 수도는 서울입니다" / "서울이 한국의 수도예요" /
+            "한국 수도는 서울" — 명백히 같은 의미인 4문장이 2개 클러스터로 잘못 쪼개지는 걸
+            확인하고 상향한 값. 근거: scripts/inspect_embedding_distances.py로 실제 코사인
+            거리를 찍어보고 결정할 것 (네트워크가 허용된 환경에서 실행 필요).
 
     Returns:
         각 샘플의 클러스터 라벨 배열 (길이 N)

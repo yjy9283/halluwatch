@@ -26,7 +26,7 @@ def analyze_question(
     question: str,
     n_samples: int = 10,
     temperature: float = 1.0,
-    distance_threshold: float = 0.15,
+    distance_threshold: float = 0.3,
     uncertainty_threshold: float = 0.4,
 ) -> EntropyResult:
     """질문 하나에 대해 전체 semantic entropy 파이프라인을 실행한다.
