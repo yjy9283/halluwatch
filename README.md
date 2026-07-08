@@ -2,6 +2,8 @@
 
 > LLM이 "확신 없는 답"을 내놓는 순간을 답변이 나오기 전에 미리 감지하는 환각(Hallucination) 조기경보 시스템
 
+![대시보드](docs/screenshots/dashboard_main.png)
+
 ## 문제의식
 
 LLM은 모르는 것도 자신 있는 어조로 답하는 경향이 있습니다. 이 프로젝트는 답변 "내용"을 검증하는
